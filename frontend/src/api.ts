@@ -110,6 +110,14 @@ export type Results = {
   }[]
 }
 
+export type Point = {
+  run_id: string
+  run_number: number
+  condition: string
+  pre: number
+  post: number
+}
+
 export function adminApi(password: string) {
   const headers = { 'Content-Type': 'application/json', 'X-Admin-Password': password }
   return {
@@ -127,6 +135,8 @@ export function adminApi(password: string) {
       ),
     results: () =>
       fetch('/api/admin/results', { headers }).then((r) => jsonOrThrow<Results>(r)),
+    points: () =>
+      fetch('/api/admin/points', { headers }).then((r) => jsonOrThrow<Point[]>(r)),
     exportUrl: '/api/admin/export.csv',
   }
 }

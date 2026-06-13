@@ -91,3 +91,14 @@ class ResultsOut(BaseModel):
     total_participants: int
     completed: int
     by_condition: list[ConditionResult]
+
+
+class ParticipantPoint(BaseModel):
+    """One completed participant's pre/post scores, for the opinion graph.
+    Anonymous — no participant id."""
+
+    run_id: str
+    run_number: int
+    condition: str
+    pre: int
+    post: int

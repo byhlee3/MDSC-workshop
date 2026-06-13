@@ -82,6 +82,13 @@ def test_full_flow(client):
     assert p0["condition"] in ("pro", "anti", "control")
     assert p0["pre_score"] == 8 and p0["post_score"] == 4 and p0["shift"] == -4
 
+    # Opinion-graph points endpoint returns this completed participant
+    points = client.get("/api/admin/points", headers=ADMIN).json()
+    assert len(points) == 1
+    assert points[0]["pre"] == 8 and points[0]["post"] == 4
+    assert points[0]["condition"] in ("pro", "anti", "control")
+    assert points[0]["run_number"] == 1
+
 
 def test_resume_returns_current_state(client):
     join_code = _create_run(client)

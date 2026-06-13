@@ -17,6 +17,7 @@ from .schemas import (
     ConditionResult,
     CreateRunRequest,
     MonitorParticipant,
+    ParticipantPoint,
     ResultsOut,
     RunOut,
 )
@@ -124,6 +125,35 @@ def results(db: Session = Depends(get_db)) -> ResultsOut:
     return ResultsOut(
         total_participants=total, completed=completed, by_condition=by_condition
     )
+
+
+@router.get("/points", response_model=list[ParticipantPoint])
+def points(db: Session = Depends(get_db)) -> list[ParticipantPoint]:
+    """Per-participant pre/post scores for completed participants (both ratings),
+    for the opinion graph. Anonymous; filtered client-side by run."""
+    parts = (
+        db.execute(
+            select(Participant)
+            .where(Participant.condition.is_not(None))
+            .order_by(Participant.created_at)
+        )
+        .scalars()
+        .all()
+    )
+    out: list[ParticipantPoint] = []
+    for p in parts:
+        scores = {r.phase: r.score for r in p.ratings}
+        if "pre" in scores and "post" in scores:
+            out.append(
+                ParticipantPoint(
+                    run_id=p.run_id,
+                    run_number=p.run.run_number,
+                    condition=p.condition,
+                    pre=scores["pre"],
+                    post=scores["post"],
+                )
+            )
+    return out
 
 
 def _participant_dump(db: Session) -> list[dict]:

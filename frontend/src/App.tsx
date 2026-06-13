@@ -4,6 +4,7 @@ import {
   api,
   type ChatMessage,
   type ParticipantState,
+  type Point,
   type Results,
   type RunOut,
 } from './api'
@@ -436,6 +437,7 @@ function AdminApp() {
       {error && <p className="error">! {error}</p>}
       <CreateRun a={a} onCreated={refresh} />
       <Runs runs={runs} a={a} />
+      <OpinionGraphCard a={a} runs={runs} />
       <ResultsCard results={results} />
       <div className="card">
         <div className="eyebrow">Data</div>
@@ -543,6 +545,181 @@ function Runs({ runs, a }: { runs: RunOut[]; a: ReturnType<typeof adminApi> }) {
           )}
         </div>
       ))}
+    </div>
+  )
+}
+
+// ---- Opinion graph (dumbbell pre->post by condition) ----
+const INK = '#111317'
+const GRID = '#eceef0'
+const CONNECTOR = '#c2c6cc'
+const GREY = '#9498a0'
+const VB_W = 600
+const PAD_L = 28
+const PAD_R = 28
+const xFor = (score: number) => PAD_L + ((score - 1) / 9) * (VB_W - PAD_L - PAD_R)
+const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length
+
+const LANES: { key: string; label: string }[] = [
+  { key: 'pro', label: 'Pro — argued for the action' },
+  { key: 'anti', label: 'Anti — argued against it' },
+  { key: 'control', label: 'Control — stayed neutral' },
+  { key: 'all', label: 'All participants (pooled)' },
+]
+
+function laneStat(
+  n: number,
+  meanPre: number | null,
+  meanPost: number | null,
+  shift: number | null,
+  showAfter: boolean,
+): string {
+  if (!n) return 'n = 0'
+  if (!showAfter || meanPost == null) return `n = ${n} · μ ${meanPre!.toFixed(1)}`
+  const s = shift! >= 0 ? `+${shift!.toFixed(1)}` : shift!.toFixed(1)
+  return `n = ${n} · μ ${meanPre!.toFixed(1)} → ${meanPost.toFixed(1)} · Δ ${s}`
+}
+
+function Lane({ points, showAfter }: { points: Point[]; showAfter: boolean }) {
+  const n = points.length
+  const band = 80
+  const yFor = (i: number) => (n <= 1 ? band / 2 : 12 + (i / (n - 1)) * (band - 24))
+  const meanPre = n ? avg(points.map((p) => p.pre)) : null
+  const meanPost = n ? avg(points.map((p) => p.post)) : null
+
+  return (
+    <svg viewBox={`0 0 ${VB_W} ${band}`} width="100%" height={band} style={{ display: 'block' }}>
+      {/* gridlines at each integer */}
+      {Array.from({ length: 10 }, (_, k) => k + 1).map((s) => (
+        <line key={s} x1={xFor(s)} y1={4} x2={xFor(s)} y2={band - 4} stroke={GRID} strokeWidth={1} />
+      ))}
+      {/* mean ticks */}
+      {meanPre != null && (
+        <line
+          x1={xFor(meanPre)}
+          y1={2}
+          x2={xFor(meanPre)}
+          y2={band - 2}
+          stroke={GREY}
+          strokeWidth={1.5}
+          strokeDasharray="3 3"
+        />
+      )}
+      {showAfter && meanPost != null && (
+        <line x1={xFor(meanPost)} y1={2} x2={xFor(meanPost)} y2={band - 2} stroke={INK} strokeWidth={1.5} />
+      )}
+      {/* dumbbells */}
+      {points.map((p, i) => {
+        const y = yFor(i)
+        return (
+          <g key={i}>
+            {showAfter && (
+              <line x1={xFor(p.pre)} y1={y} x2={xFor(p.post)} y2={y} stroke={CONNECTOR} strokeWidth={1.5} />
+            )}
+            <circle cx={xFor(p.pre)} cy={y} r={4.5} fill="#fff" stroke={INK} strokeWidth={1.5} opacity={0.95} />
+            {showAfter && <circle cx={xFor(p.post)} cy={y} r={4.5} fill={INK} opacity={0.95} />}
+          </g>
+        )
+      })}
+    </svg>
+  )
+}
+
+function OpinionGraph({ points, showAfter }: { points: Point[]; showAfter: boolean }) {
+  return (
+    <div>
+      {LANES.map((lane) => {
+        const lp = lane.key === 'all' ? points : points.filter((p) => p.condition === lane.key)
+        const n = lp.length
+        const meanPre = n ? avg(lp.map((p) => p.pre)) : null
+        const meanPost = n ? avg(lp.map((p) => p.post)) : null
+        const shift = meanPre != null && meanPost != null ? meanPost - meanPre : null
+        return (
+          <div key={lane.key} style={{ marginBottom: 8 }}>
+            <div className="row spread" style={{ marginBottom: 2 }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{lane.label}</span>
+              <span className="lane-stat">{laneStat(n, meanPre, meanPost, shift, showAfter)}</span>
+            </div>
+            <Lane points={lp} showAfter={showAfter} />
+          </div>
+        )
+      })}
+      {/* shared axis */}
+      <svg viewBox={`0 0 ${VB_W} 30`} width="100%" height={30} style={{ display: 'block' }}>
+        {Array.from({ length: 10 }, (_, k) => k + 1).map((s) => (
+          <text
+            key={s}
+            x={xFor(s)}
+            y={12}
+            textAnchor="middle"
+            fontSize={10}
+            fontFamily="IBM Plex Mono, monospace"
+            fill={GREY}
+          >
+            {s}
+          </text>
+        ))}
+        <text x={xFor(1)} y={26} textAnchor="start" fontSize={9} fill={GREY}>
+          Strongly disagree
+        </text>
+        <text x={xFor(10)} y={26} textAnchor="end" fontSize={9} fill={GREY}>
+          Strongly agree
+        </text>
+      </svg>
+    </div>
+  )
+}
+
+function OpinionGraphCard({ a, runs }: { a: ReturnType<typeof adminApi>; runs: RunOut[] }) {
+  const [points, setPoints] = useState<Point[]>([])
+  const [showAfter, setShowAfter] = useState(false)
+  const [runFilter, setRunFilter] = useState('all')
+
+  useEffect(() => {
+    const load = () => a.points().then(setPoints).catch(() => {})
+    load()
+    const t = setInterval(load, 4000)
+    return () => clearInterval(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const filtered = runFilter === 'all' ? points : points.filter((p) => p.run_id === runFilter)
+
+  return (
+    <div className="card">
+      <div className="eyebrow">Opinion shift</div>
+      <div className="graph-controls">
+        <button onClick={() => setShowAfter((s) => !s)}>
+          {showAfter ? 'Hide after' : 'Show after ▸'}
+        </button>
+        <select value={runFilter} onChange={(e) => setRunFilter(e.target.value)}>
+          <option value="all">All runs</option>
+          {runs.map((r) => (
+            <option key={r.id} value={r.id}>
+              Run {r.run_number}
+            </option>
+          ))}
+        </select>
+        <div className="legend">
+          <span>
+            <svg width="12" height="12">
+              <circle cx="6" cy="6" r="4.5" fill="#fff" stroke={INK} strokeWidth="1.5" />
+            </svg>
+            Before
+          </span>
+          <span>
+            <svg width="12" height="12">
+              <circle cx="6" cy="6" r="4.5" fill={INK} />
+            </svg>
+            After
+          </span>
+        </div>
+      </div>
+      {filtered.length === 0 ? (
+        <p className="muted">No completed participants yet.</p>
+      ) : (
+        <OpinionGraph points={filtered} showAfter={showAfter} />
+      )}
     </div>
   )
 }
