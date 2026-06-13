@@ -11,6 +11,14 @@ import {
 
 const PID_KEY = 'ethics_pid'
 
+function agreeWord(n: number): string {
+  if (n <= 2) return 'strongly disagree'
+  if (n <= 4) return 'disagree'
+  if (n <= 6) return 'undecided'
+  if (n <= 8) return 'agree'
+  return 'strongly agree'
+}
+
 export default function App() {
   const [isAdmin, setIsAdmin] = useState(window.location.hash === '#admin')
   useEffect(() => {
@@ -28,7 +36,6 @@ function StudentApp() {
   const [state, setState] = useState<ParticipantState | null>(null)
   const [error, setError] = useState('')
 
-  // Resume on load if we have a stored participant id.
   useEffect(() => {
     const pid = localStorage.getItem(PID_KEY)
     if (!pid) return
@@ -53,8 +60,8 @@ function StudentApp() {
   const common = { state, setState, setError }
   return (
     <>
-      <h1>Clinical Ethics Discussion</h1>
-      {error && <p className="error">{error}</p>}
+      <div className="wordmark">An Ethics Adventure</div>
+      {error && <p className="error">! {error}</p>}
       {state.phase === 'joined' && <Consent {...common} />}
       {state.phase === 'scenario' && <RatePhase phase="pre" {...common} />}
       {state.phase === 'chatting' && <Chat {...common} />}
@@ -76,14 +83,25 @@ function Join({ onJoined }: { onJoined: (s: ParticipantState) => void }) {
   }
   return (
     <>
-      <h1>Clinical Ethics Discussion</h1>
+      <div className="wordmark">An Ethics Adventure</div>
       <div className="card">
-        <p>Enter the join code provided by your facilitator.</p>
-        <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="ABC123" />
-        {error && <p className="error">{error}</p>}
-        <div style={{ marginTop: 12 }}>
+        <div className="eyebrow">Begin</div>
+        <h2>Enter the case</h2>
+        <p>
+          You are about to weigh a difficult clinical decision, talk it over, and weigh it
+          once more. Enter the code your facilitator gave you to begin.
+        </p>
+        <input
+          className="join-code"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          placeholder="ABC123"
+          onKeyDown={(e) => e.key === 'Enter' && submit()}
+        />
+        {error && <p className="error">! {error}</p>}
+        <div className="actions" style={{ marginTop: 18 }}>
           <button onClick={submit} disabled={!code.trim()}>
-            Join
+            Begin
           </button>
         </div>
       </div>
@@ -107,16 +125,19 @@ function Consent({ state, setState, setError }: PhaseProps) {
   }
   return (
     <div className="card">
-      <h2>Consent</h2>
+      <div className="eyebrow">Before you begin</div>
+      <h2>A few words first</h2>
       <p>
-        In this session you will read a short clinical case, rate how much you agree with the
-        action the care team took, discuss the case with an AI, and then rate it again.
+        In this session you will read a short clinical case, rate how much you agree with
+        the action the care team took, discuss the case with an AI, and then rate it again.
       </p>
       <p>
-        Your responses are recorded anonymously — we do not collect your name or any
+        Your responses are recorded <strong>anonymously</strong> — we collect no name or
         identifying information. You may stop at any time.
       </p>
-      <button onClick={accept}>I understand and agree</button>
+      <div className="actions">
+        <button onClick={accept}>I understand — continue</button>
+      </div>
     </div>
   )
 }
@@ -124,10 +145,11 @@ function Consent({ state, setState, setError }: PhaseProps) {
 function ScenarioCard({ state }: { state: ParticipantState }) {
   return (
     <div className="card">
+      <div className="eyebrow">The Case</div>
       <h2>{state.scenario.title}</h2>
       <div className="scenario">{state.scenario.body}</div>
       <div className="action">
-        <strong>Action the care team took:</strong>
+        <strong>The action the care team took</strong>
         <div className="scenario">{state.scenario.action_taken}</div>
       </div>
     </div>
@@ -167,10 +189,19 @@ function RatePhase({
     <>
       <ScenarioCard state={state} />
       <div className="card">
-        <h2>{phase === 'pre' ? 'Your initial rating' : 'Your rating after the discussion'}</h2>
+        <div className="eyebrow">{phase === 'pre' ? 'Your verdict' : 'Your verdict, revisited'}</div>
+        <h2>{phase === 'pre' ? 'Where do you stand?' : 'Where do you stand now?'}</h2>
         <p>How much do you agree with the action the care team took?</p>
-        <div className="row">
-          <span className="muted">Strongly disagree</span>
+
+        <div className="scale">
+          <div className="scale-value">
+            {score}
+            <small>{agreeWord(score)}</small>
+          </div>
+          <div className="scale-labels">
+            <span>Strongly disagree</span>
+            <span>Strongly agree</span>
+          </div>
           <input
             type="range"
             min={1}
@@ -178,22 +209,26 @@ function RatePhase({
             value={score}
             onChange={(e) => setScore(Number(e.target.value))}
           />
-          <span className="muted">Strongly agree</span>
-          <strong style={{ width: 24, textAlign: 'right' }}>{score}</strong>
         </div>
-        <p style={{ marginBottom: 4 }}>Briefly, why?</p>
-        <textarea value={rationale} onChange={(e) => setRationale(e.target.value)} />
+
+        <div className="field">
+          <label>Briefly — why?</label>
+          <textarea value={rationale} onChange={(e) => setRationale(e.target.value)} />
+        </div>
+
         {phase === 'post' && (
-          <>
-            <p style={{ marginBottom: 4, marginTop: 12 }}>
-              Did the conversation change your mind? How?
-            </p>
-            <textarea value={changeReport} onChange={(e) => setChangeReport(e.target.value)} />
-          </>
+          <div className="field">
+            <label>Did the conversation change your mind? How?</label>
+            <textarea
+              value={changeReport}
+              onChange={(e) => setChangeReport(e.target.value)}
+            />
+          </div>
         )}
-        <div style={{ marginTop: 12 }}>
+
+        <div className="actions" style={{ marginTop: 18 }}>
           <button onClick={submit} disabled={busy || !rationale.trim()}>
-            {phase === 'pre' ? 'Continue to discussion' : 'Submit final rating'}
+            {phase === 'pre' ? 'Continue to the discussion' : 'Submit final verdict'}
           </button>
         </div>
       </div>
@@ -211,7 +246,6 @@ function Chat({ state, setState, setError }: PhaseProps) {
 
   const startKey = `chat_start_${state.participant_id}`
 
-  // Load history + establish the chat start time.
   useEffect(() => {
     api.getMessages(state.participant_id).then(setMessages).catch(() => {})
     if (!localStorage.getItem(startKey)) {
@@ -220,7 +254,6 @@ function Chat({ state, setState, setError }: PhaseProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.participant_id])
 
-  // Countdown tick.
   useEffect(() => {
     const start = Number(localStorage.getItem(startKey)) || Date.now()
     const t = setInterval(() => setElapsed(Math.floor((Date.now() - start) / 1000)), 1000)
@@ -259,9 +292,6 @@ function Chat({ state, setState, setError }: PhaseProps) {
     }
   }
 
-  // Advance the UI to the post-rating screen. The server keeps the participant in
-  // 'chatting' until the post rating is actually submitted (with its own min-message
-  // check), so this is purely a client-side step.
   const finish = () => setState({ ...state, phase: 'post' })
 
   const mm = String(Math.floor(remaining / 60)).padStart(2, '0')
@@ -270,32 +300,38 @@ function Chat({ state, setState, setError }: PhaseProps) {
   return (
     <>
       <div className="card">
-        <div className="row" style={{ justifyContent: 'space-between' }}>
-          <h2 style={{ margin: 0 }}>Discuss the case</h2>
-          <span className="muted">
-            Time left {mm}:{ss}
+        <div className="eyebrow">The Discussion</div>
+        <div className="row spread">
+          <h2 style={{ margin: 0 }}>Talk it over</h2>
+          <span className={`timer${remaining < 60 ? ' urgent' : ''}`}>
+            {mm}:{ss}
           </span>
         </div>
         <p className="muted">
-          Talk through your view. You can continue after {state.chat_min_student_messages}{' '}
-          messages and {Math.round(state.chat_min_seconds / 60)} min.
+          Think aloud and push back. You may continue after{' '}
+          {state.chat_min_student_messages} messages and{' '}
+          {Math.round(state.chat_min_seconds / 60)} min.
         </p>
-        <div
-          className="chat-log"
-          ref={logRef}
-          style={{ maxHeight: 360, overflowY: 'auto' }}
-        >
+
+        <div className="chat-log" ref={logRef}>
           {messages.map((m, i) => (
-            <div key={i} className={`bubble ${m.role}`}>
-              {m.content}
+            <div key={i} className={`turn ${m.role}`}>
+              <div className="turn-label">{m.role === 'student' ? 'You' : 'The Voice'}</div>
+              <div className="turn-body">{m.content}</div>
             </div>
           ))}
-          {streaming && <div className="bubble ai">{streaming}</div>}
+          {streaming && (
+            <div className="turn ai">
+              <div className="turn-label">The Voice</div>
+              <div className="turn-body cursor">{streaming}</div>
+            </div>
+          )}
           {messages.length === 0 && !streaming && (
-            <p className="muted">Send a message to start the discussion.</p>
+            <p className="muted">— Begin the discussion below. —</p>
           )}
         </div>
-        <div className="row">
+
+        <div className="chat-input">
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -312,9 +348,10 @@ function Chat({ state, setState, setError }: PhaseProps) {
           </button>
         </div>
       </div>
-      <div className="row" style={{ justifyContent: 'flex-end' }}>
-        <button onClick={finish} disabled={!canContinue && !timeUp}>
-          Continue to final rating
+
+      <div className="actions">
+        <button className="secondary" onClick={finish} disabled={!canContinue && !timeUp}>
+          Continue to your final verdict
         </button>
       </div>
     </>
@@ -337,29 +374,35 @@ function DebriefView({ state, onReset }: { state: ParticipantState; onReset: () 
 
   return (
     <div className="card">
-      <h2>Thank you — here's what was really going on</h2>
-      {error && <p className="error">{error}</p>}
+      <div className="eyebrow">The Reveal</div>
+      <h2>Here's what was really going on</h2>
+      {error && <p className="error">! {error}</p>}
       {debrief && (
         <>
           <p>
-            The AI you spoke with was <strong>secretly assigned</strong> a position before
-            your conversation. In your case, it was instructed to{' '}
+            The voice you spoke with was <strong>secretly assigned</strong> a position
+            before your conversation. In your case, it was instructed to{' '}
             <strong>{label[debrief.condition]}</strong>. We didn't tell you in advance
-            because knowing would have changed how you engaged — that's the whole point of
+            because knowing would have changed how you engaged — that is the whole point of
             the study.
           </p>
-          <p>
-            Your rating went from <strong>{debrief.pre_score}</strong> before to{' '}
-            <strong>{debrief.post_score}</strong> after — a shift of{' '}
-            <strong>{debrief.shift > 0 ? `+${debrief.shift}` : debrief.shift}</strong>.
-          </p>
+          <div className="scale" style={{ textAlign: 'center' }}>
+            <div className="scale-value" style={{ fontSize: '1.4rem' }}>
+              {debrief.pre_score} &nbsp;→&nbsp; {debrief.post_score}
+              <small>
+                a shift of {debrief.shift > 0 ? `+${debrief.shift}` : debrief.shift}
+              </small>
+            </div>
+          </div>
           <p className="muted">
             We're studying whether and how AI conversation shifts ethical reasoning. Your
-            anonymous responses help answer that.
+            anonymous responses help answer that. Thank you.
           </p>
-          <button className="secondary" onClick={onReset}>
-            Done
-          </button>
+          <div className="actions">
+            <button className="secondary" onClick={onReset}>
+              Close the book
+            </button>
+          </div>
         </>
       )}
     </div>
@@ -398,36 +441,41 @@ function AdminApp() {
 
   if (!authed) {
     return (
-      <div className="card">
-        <h2>Facilitator login</h2>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Admin password"
-        />
-        {error && <p className="error">{error}</p>}
-        <div style={{ marginTop: 12 }}>
-          <button onClick={refresh}>Enter</button>
+      <>
+        <div className="wordmark">Facilitator's Desk</div>
+        <div className="card">
+          <div className="eyebrow">Restricted</div>
+          <h2>Facilitator login</h2>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Admin password"
+            onKeyDown={(e) => e.key === 'Enter' && refresh()}
+          />
+          {error && <p className="error">! {error}</p>}
+          <div className="actions" style={{ marginTop: 16 }}>
+            <button onClick={refresh}>Enter</button>
+          </div>
         </div>
-      </div>
+      </>
     )
   }
 
   return (
     <>
-      <h1>Facilitator dashboard</h1>
-      {error && <p className="error">{error}</p>}
+      <div className="wordmark">Facilitator's Desk</div>
+      {error && <p className="error">! {error}</p>}
       <CreateRun a={a} onCreated={refresh} />
       <Runs runs={runs} a={a} />
       <ResultsCard results={results} />
       <div className="card">
+        <div className="eyebrow">Data</div>
         <a href={a.exportUrl}>
           <button className="secondary">Download CSV export</button>
         </a>
-        <p className="muted">
-          CSV download uses the browser session; the full JSON dump is at
-          /api/admin/export.json (send the password header).
+        <p className="muted" style={{ marginTop: 12 }}>
+          The full JSON dump is at /api/admin/export.json (send the password header).
         </p>
       </div>
     </>
@@ -449,21 +497,24 @@ function CreateRun({
   }
   return (
     <div className="card">
+      <div className="eyebrow">New session</div>
       <h2>Create a run</h2>
       <div className="row">
-        <label>Run #</label>
+        <label>Run №</label>
         <input
           type="number"
-          style={{ width: 80 }}
+          style={{ width: 90 }}
           value={num}
           onChange={(e) => setNum(Number(e.target.value))}
         />
         <button onClick={create}>Create</button>
       </div>
       {created && (
-        <p style={{ marginTop: 12 }}>
+        <p style={{ marginTop: 16 }}>
           Run {created.run_number} created. Join code:{' '}
-          <strong style={{ fontSize: '1.3em' }}>{created.join_code}</strong>
+          <span className="join-code" style={{ display: 'inline-block' }}>
+            {created.join_code}
+          </span>
         </p>
       )}
     </div>
@@ -484,13 +535,16 @@ function Runs({ runs, a }: { runs: RunOut[]; a: ReturnType<typeof adminApi> }) {
 
   return (
     <div className="card">
-      <h2>Runs</h2>
+      <div className="eyebrow">Runs</div>
       {runs.length === 0 && <p className="muted">No runs yet.</p>}
       {runs.map((r) => (
-        <div key={r.id} style={{ marginBottom: 8 }}>
-          <div className="row" style={{ justifyContent: 'space-between' }}>
+        <div key={r.id} style={{ marginBottom: 12 }}>
+          <div className="row spread">
             <span>
-              Run {r.run_number} — code <strong>{r.join_code}</strong>
+              Run {r.run_number} — code{' '}
+              <span className="join-code" style={{ display: 'inline-block', fontSize: '1rem' }}>
+                {r.join_code}
+              </span>
             </span>
             <button
               className="secondary"
@@ -500,7 +554,7 @@ function Runs({ runs, a }: { runs: RunOut[]; a: ReturnType<typeof adminApi> }) {
             </button>
           </div>
           {openId === r.id && (
-            <table>
+            <table style={{ marginTop: 10 }}>
               <thead>
                 <tr>
                   <th>Participant</th>
@@ -529,7 +583,8 @@ function ResultsCard({ results }: { results: Results | null }) {
   if (!results) return null
   return (
     <div className="card">
-      <h2>Results (pooled across all runs)</h2>
+      <div className="eyebrow">Results — pooled across all runs</div>
+      <h2>The shift</h2>
       <p className="muted">
         {results.completed} completed of {results.total_participants} joined.
       </p>
@@ -550,14 +605,12 @@ function ResultsCard({ results }: { results: Results | null }) {
               <td>{c.n}</td>
               <td>{c.mean_pre?.toFixed(2) ?? '—'}</td>
               <td>{c.mean_post?.toFixed(2) ?? '—'}</td>
-              <td>
-                <strong>
-                  {c.mean_shift == null
-                    ? '—'
-                    : c.mean_shift > 0
-                      ? `+${c.mean_shift.toFixed(2)}`
-                      : c.mean_shift.toFixed(2)}
-                </strong>
+              <td className={c.mean_shift && c.mean_shift > 0 ? 'shift-pos' : undefined}>
+                {c.mean_shift == null
+                  ? '—'
+                  : c.mean_shift > 0
+                    ? `+${c.mean_shift.toFixed(2)}`
+                    : c.mean_shift.toFixed(2)}
               </td>
             </tr>
           ))}
