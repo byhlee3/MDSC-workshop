@@ -21,13 +21,6 @@ export type ParticipantState = {
 
 export type ChatMessage = { role: 'student' | 'ai'; content: string; ordinal: number }
 
-export type Debrief = {
-  condition: string
-  pre_score: number
-  post_score: number
-  shift: number
-}
-
 async function jsonOrThrow<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
@@ -67,9 +60,6 @@ export const api = {
 
   getMessages: (id: string) =>
     fetch(`/api/participants/${id}/messages`).then((r) => jsonOrThrow<ChatMessage[]>(r)),
-
-  debrief: (id: string) =>
-    fetch(`/api/participants/${id}/debrief`).then((r) => jsonOrThrow<Debrief>(r)),
 
   // Streams the AI reply token-by-token via the response body reader.
   async sendMessage(id: string, content: string, onDelta: (text: string) => void) {

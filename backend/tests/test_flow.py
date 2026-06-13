@@ -56,18 +56,16 @@ def test_full_flow(client):
     assert len(msgs) == 6
     assert [m["role"] for m in msgs] == ["student", "ai"] * 3
 
-    # Post-rating
+    # Post-rating completes the study (no on-screen debrief; facilitator debriefs live)
     r = client.post(
         f"/api/participants/{pid}/rating?phase=post",
         json={"score": 4, "rationale": "Changed my mind.", "change_report": "Yes, a lot."},
     )
     assert r.status_code == 200, r.text
-    assert r.json()["phase"] == "post"
+    assert r.json()["phase"] == "done"
 
-    # Debrief reveals condition + shift
-    d = client.get(f"/api/participants/{pid}/debrief").json()
-    assert d["pre_score"] == 8 and d["post_score"] == 4 and d["shift"] == -4
-    assert d["condition"] in ("pro", "anti", "control")
+    # No student-facing debrief endpoint exists (would leak the condition)
+    assert client.get(f"/api/participants/{pid}/debrief").status_code == 404
 
     # Results + export reflect the participant
     results = client.get("/api/admin/results", headers=ADMIN).json()
@@ -77,8 +75,12 @@ def test_full_flow(client):
     csv_text = client.get("/api/admin/export.csv", headers=ADMIN).text
     assert "participant_id" in csv_text
     dump = client.get("/api/admin/export.json", headers=ADMIN).json()
-    assert dump["participants"][0]["resolved_system_prompt"]
-    assert len(dump["participants"][0]["transcript"]) == 6
+    p0 = dump["participants"][0]
+    assert p0["resolved_system_prompt"]
+    assert len(p0["transcript"]) == 6
+    # Condition + shift are available to the facilitator via export
+    assert p0["condition"] in ("pro", "anti", "control")
+    assert p0["pre_score"] == 8 and p0["post_score"] == 4 and p0["shift"] == -4
 
 
 def test_resume_returns_current_state(client):

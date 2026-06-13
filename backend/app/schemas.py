@@ -56,14 +56,6 @@ class MessageOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-# ---- Debrief (post-study; condition is now safe to reveal) ----
-class DebriefOut(BaseModel):
-    condition: str
-    pre_score: int
-    post_score: int
-    shift: int
-
-
 # ---- Admin ----
 class CreateRunRequest(BaseModel):
     run_number: int

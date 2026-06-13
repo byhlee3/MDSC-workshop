@@ -18,7 +18,6 @@ from .db import get_db, init_db
 from .deps import get_participant
 from .models import PHASES, Message, Participant, Rating, Run
 from .schemas import (
-    DebriefOut,
     JoinRequest,
     MessageIn,
     MessageOut,
@@ -156,7 +155,11 @@ def submit_rating(
                 detail=f"Need at least {settings.chat_min_student_messages} messages "
                 f"before finishing (sent {msgs}).",
             )
-        p.phase = "post"
+        # Final verdict completes the study. The deception is NOT disclosed on
+        # screen (the facilitator debriefs the group live, to avoid early
+        # finishers tipping off students still chatting); condition is available
+        # to the facilitator only, via the admin dashboard/export.
+        p.phase = "done"
 
     db.add(
         Rating(
@@ -258,22 +261,3 @@ def send_message(
                     s.commit()
 
     return StreamingResponse(event_stream(), media_type="text/plain")
-
-
-@app.get("/api/participants/{participant_id}/debrief", response_model=DebriefOut)
-def debrief(
-    p: Participant = Depends(get_participant), db: Session = Depends(get_db)
-) -> DebriefOut:
-    pre = _rating(db, p.id, "pre")
-    post = _rating(db, p.id, "post")
-    if p.condition is None or pre is None or post is None:
-        raise HTTPException(status_code=409, detail="Study not complete")
-    if _phase_index(p.phase) < _phase_index("done"):
-        p.phase = "done"
-        db.commit()
-    return DebriefOut(
-        condition=p.condition,
-        pre_score=pre.score,
-        post_score=post.score,
-        shift=post.score - pre.score,
-    )

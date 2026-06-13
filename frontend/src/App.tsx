@@ -3,7 +3,6 @@ import {
   adminApi,
   api,
   type ChatMessage,
-  type Debrief,
   type ParticipantState,
   type Results,
   type RunOut,
@@ -58,6 +57,8 @@ function StudentApp() {
     )
 
   const common = { state, setState, setError }
+  // `post` is a client-only transient (chat finished, post-rating not yet sent);
+  // the server jumps straight from `chatting` to `done` on the final verdict.
   return (
     <>
       <div className="wordmark">An Ethics Adventure</div>
@@ -66,7 +67,7 @@ function StudentApp() {
       {state.phase === 'scenario' && <RatePhase phase="pre" {...common} />}
       {state.phase === 'chatting' && <Chat {...common} />}
       {state.phase === 'post' && <RatePhase phase="post" {...common} />}
-      {state.phase === 'done' && <DebriefView state={state} onReset={reset} />}
+      {state.phase === 'done' && <Submitted onReset={reset} />}
     </>
   )
 }
@@ -358,53 +359,20 @@ function Chat({ state, setState, setError }: PhaseProps) {
   )
 }
 
-function DebriefView({ state, onReset }: { state: ParticipantState; onReset: () => void }) {
-  const [debrief, setDebrief] = useState<Debrief | null>(null)
-  const [error, setError] = useState('')
-  useEffect(() => {
-    api.debrief(state.participant_id).then(setDebrief).catch((e) => setError(e.message))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const label: Record<string, string> = {
-    pro: 'argue in favour of the action the care team took',
-    anti: 'argue against the action the care team took',
-    control: 'stay neutral and not push you either way',
-  }
-
+function Submitted({ onReset }: { onReset: () => void }) {
   return (
     <div className="card">
-      <div className="eyebrow">The Reveal</div>
-      <h2>Here's what was really going on</h2>
-      {error && <p className="error">! {error}</p>}
-      {debrief && (
-        <>
-          <p>
-            The voice you spoke with was <strong>secretly assigned</strong> a position
-            before your conversation. In your case, it was instructed to{' '}
-            <strong>{label[debrief.condition]}</strong>. We didn't tell you in advance
-            because knowing would have changed how you engaged — that is the whole point of
-            the study.
-          </p>
-          <div className="scale" style={{ textAlign: 'center' }}>
-            <div className="scale-value" style={{ fontSize: '1.4rem' }}>
-              {debrief.pre_score} &nbsp;→&nbsp; {debrief.post_score}
-              <small>
-                a shift of {debrief.shift > 0 ? `+${debrief.shift}` : debrief.shift}
-              </small>
-            </div>
-          </div>
-          <p className="muted">
-            We're studying whether and how AI conversation shifts ethical reasoning. Your
-            anonymous responses help answer that. Thank you.
-          </p>
-          <div className="actions">
-            <button className="secondary" onClick={onReset}>
-              Close the book
-            </button>
-          </div>
-        </>
-      )}
+      <div className="eyebrow">Submitted</div>
+      <h2>Thank you for taking part</h2>
+      <p>
+        Your responses have been recorded. Please set your device down — we'll discuss the
+        case together as a group shortly.
+      </p>
+      <div className="actions">
+        <button className="secondary" onClick={onReset}>
+          Close
+        </button>
+      </div>
     </div>
   )
 }
