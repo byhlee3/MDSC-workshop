@@ -19,7 +19,7 @@ A web app for a workshop with medical students. Present a medical-ethics scenari
 4. **Pre-rating** — 1–10 slider + required free-text rationale. (Triggers condition assignment.)
 5. **AI chat** — 1:1, time-boxed countdown (~8 min, tunable), minimum time/exchanges before "Continue" unlocks.
 6. **Post-rating** — same scenario re-shown; slider + rationale + "did this change your mind?" self-report.
-7. **Debrief** — discloses the deception, which condition they were in, and their personal pre→post shift.
+7. **Submitted** — a plain "thank you for taking part" screen. **No on-screen disclosure** of the deception or condition (see Ethics).
 
 ## AI behavior
 - **Model:** `claude-opus-4-8`, streaming.
@@ -35,15 +35,18 @@ A web app for a workshop with medical students. Present a medical-ethics scenari
 
 ## Architecture
 - **Backend:** FastAPI + Pydantic + uv; SQLAlchemy + **SQLite** (`study.db`). Holds the API key and secret prompts; streams Claude via SSE. **Secrets are server-side only.**
-- **Frontend:** React + bun + Vite + shadcn/ui + TanStack Query.
+- **Frontend:** React + bun + Vite, custom monochrome CSS (modern-minimal, no component library).
 - **Auth:** none for students (per-run join code → anonymous ID); single shared admin password for facilitator routes.
 - **Hosting:** one small server serving the built frontend + API.
 
 ## Admin tooling
 - Create-a-run (returns join code), live monitor (who joined + each phase), results dashboard (mean shift by condition, pooled across runs), CSV/JSON export.
+- **Opinion graph** — dumbbell dot plot with 4 lanes (pro / anti / control / pooled ALL) on the 1–10 axis; shows BEFORE opinions, then a "Show after" toggle overlays AFTER opinions + per-participant shift connectors + mean shift. Run-filter dropdown (pooled-all by default).
 
 ## Ethics
-- Fully anonymous (no name/email/student ID ever stored). Deception study: consent up front (no manipulation disclosed), **mandatory debrief** discloses it. **IRB / institutional ethics approval is a precondition to running.**
+- Fully anonymous (no name/email/student ID ever stored). Deception study: consent up front (no manipulation disclosed), **mandatory debrief**.
+- **Debrief is facilitator-led and live** — delivered to the group in the classroom after the session, not on screen. This avoids early finishers seeing the reveal and tipping off students still chatting. The student-facing `/debrief` endpoint was removed so a participant cannot self-reveal their condition; conditions remain available to facilitators via the dashboard/export.
+- **IRB / institutional ethics approval is a precondition to running.**
 
 ## Scenario (run 1)
 Withdrawing life-sustaining treatment from a 24-year-old with severe autoimmune
