@@ -1,0 +1,9 @@
+# OS
+.DS_Store
+
+# Local Claude overrides (machine-specific)
+.claude/settings.local.json
+
+# Secrets & data (also covered by backend/.gitignore)
+**/.env
+*.db
