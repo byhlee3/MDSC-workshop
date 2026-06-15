@@ -41,7 +41,7 @@ A web app for a workshop with medical students. Present a medical-ethics scenari
 
 ## Admin tooling
 - Create-a-run (returns join code), live monitor (who joined + each phase), results dashboard (mean shift by condition, pooled across runs), CSV/JSON export.
-- **Opinion graph** — dumbbell dot plot with 4 lanes (pro / anti / control / pooled ALL) on the 1–10 axis; shows BEFORE opinions, then a "Show after" toggle overlays AFTER opinions + per-participant shift connectors + mean shift. Run-filter dropdown (pooled-all by default).
+- **Opinion graph** — dumbbell dot plot with 4 lanes (pro / anti / control / pooled ALL) on the 1–10 axis; shows BEFORE opinions, then a "Show after" toggle animates AFTER opinions in (dots slide from before→after) with per-participant shift connectors and a per-lane net shift (Δ). Dots are coloured by condition, connectors by shift direction. Run-filter dropdown (pooled-all by default) and a full-screen presentation mode for class display.
 
 ## Ethics
 - Fully anonymous (no name/email/student ID ever stored). Deception study: consent up front (no manipulation disclosed), **mandatory debrief**.
