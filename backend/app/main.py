@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -266,3 +268,13 @@ def send_message(
                     s.commit()
 
     return StreamingResponse(event_stream(), media_type="text/plain")
+
+
+# Serve the built frontend (Vite dist) at the root origin.
+# MUST be mounted LAST so it never shadows the /api/* routes or the admin router.
+# Resolved relative to this module (not cwd) so it works under Docker or local.
+# The is_dir() guard keeps local dev working when no build is present (use the
+# Vite dev server on :5173 instead).
+_STATIC_DIR = Path(__file__).resolve().parent.parent / "static"  # -> backend/static
+if _STATIC_DIR.is_dir():
+    app.mount("/", StaticFiles(directory=_STATIC_DIR, html=True), name="frontend")
