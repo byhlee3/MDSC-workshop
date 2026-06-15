@@ -15,6 +15,7 @@ export type ParticipantState = {
   chat_min_seconds: number
   chat_min_student_messages: number
   pre_score: number | null
+  pre_rationale: string | null
   post_score: number | null
   student_message_count: number
 }
@@ -89,6 +90,7 @@ export type RunOut = {
   join_code: string
   facilitator: string
   created_at: string
+  participant_count: number
 }
 
 export type MonitorParticipant = {
@@ -121,14 +123,19 @@ export type Point = {
 export function adminApi(password: string) {
   const headers = { 'Content-Type': 'application/json', 'X-Admin-Password': password }
   return {
-    createRun: (runNumber: number, facilitator: string) =>
+    // run_number is omitted — the server assigns the next number.
+    createRun: () =>
       fetch('/api/admin/runs', {
         method: 'POST',
         headers,
-        body: JSON.stringify({ run_number: runNumber, facilitator }),
+        body: JSON.stringify({}),
       }).then((r) => jsonOrThrow<RunOut>(r)),
     listRuns: () =>
       fetch('/api/admin/runs', { headers }).then((r) => jsonOrThrow<RunOut[]>(r)),
+    deleteRun: (runId: string) =>
+      fetch(`/api/admin/runs/${runId}`, { method: 'DELETE', headers }).then((r) => {
+        if (!r.ok) throw new Error(`Delete failed (${r.status})`)
+      }),
     monitor: (runId: string) =>
       fetch(`/api/admin/runs/${runId}/monitor`, { headers }).then((r) =>
         jsonOrThrow<MonitorParticipant[]>(r),

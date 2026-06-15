@@ -18,6 +18,7 @@
   --shadow: 0 1px 2px rgba(16, 18, 23, 0.04), 0 6px 20px rgba(16, 18, 23, 0.05);
 
   --font: 'Inter', system-ui, -apple-system, sans-serif;
+  --serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
   --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
 
   color: var(--ink);
@@ -45,25 +46,36 @@ body {
   padding: 44px 22px 96px;
 }
 
-/* ---- Typography ---- */
+/* ---- Typography ----
+   Modern serif (Source Serif 4) for headings + reading prose — a free stand-in
+   for the warm literary serif Claude uses. Inter stays on UI chrome (buttons,
+   labels, inputs, tables), mono on numerals. */
 h1,
 h2,
 h3 {
+  font-family: var(--serif);
   font-weight: 600;
-  letter-spacing: -0.014em;
-  line-height: 1.25;
+  letter-spacing: -0.01em;
+  line-height: 1.22;
   margin: 0 0 0.5em;
 }
 
 h1 {
-  font-size: 1.6rem;
+  font-size: 1.7rem;
 }
 h2 {
-  font-size: 1.2rem;
+  font-size: 1.3rem;
 }
 
 p {
   margin: 0 0 0.85em;
+}
+
+/* reading prose inside cards is serif; small helper/muted text stays sans */
+.card > p:not(.muted),
+.scenario,
+.turn-body {
+  font-family: var(--serif);
 }
 
 strong {
@@ -176,6 +188,18 @@ button.secondary {
 
 button.secondary:hover:not(:disabled) {
   background: var(--surface-2);
+  border-color: var(--ink-3);
+}
+
+/* compact square icon button (e.g. delete ✕) */
+button.btn-x {
+  padding: 10px 12px;
+  line-height: 1;
+  color: var(--ink-2);
+}
+
+button.btn-x:hover:not(:disabled) {
+  color: var(--ink);
   border-color: var(--ink-3);
 }
 
@@ -411,6 +435,15 @@ input[type='range']::-moz-range-thumb {
   align-items: flex-end;
 }
 
+/* Message box: no drag-handle; starts at one line and auto-grows (JS sets the
+   height), with a cap before it scrolls. */
+.chat-input textarea {
+  resize: none;
+  min-height: 44px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
 /* ---- Tables (admin) ---- */
 table {
   width: 100%;
@@ -463,7 +496,8 @@ hr.rule {
 
 .legend {
   display: flex;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 8px 14px;
   font-size: 0.72rem;
   color: var(--ink-2);
   margin-left: auto;
@@ -475,8 +509,82 @@ hr.rule {
   gap: 6px;
 }
 
+/* condition swatch chips (pro / anti / control) */
+.legend .swatch::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--sw);
+}
+
+.lane-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
 .lane-stat {
   font-family: var(--mono);
   font-size: 0.78rem;
   color: var(--ink);
+}
+
+/* ---- Opinion graph — full-screen presentation mode ---- */
+.opinion-fs {
+  position: relative;
+}
+
+/* native Fullscreen API target */
+.opinion-fs:fullscreen {
+  background: var(--bg);
+  padding: 48px 56px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* CSS fixed-overlay fallback when the Fullscreen API is unavailable */
+.opinion-fs.is-fs:not(:fullscreen) {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--bg);
+  padding: 48px 56px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* larger, more legible controls at the projector */
+.opinion-fs:fullscreen .graph-controls,
+.opinion-fs.is-fs .graph-controls {
+  font-size: 1.05rem;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.opinion-fs:fullscreen .graph-controls button,
+.opinion-fs.is-fs .graph-controls button,
+.opinion-fs:fullscreen .graph-controls select,
+.opinion-fs.is-fs .graph-controls select {
+  font-size: 1rem;
+  padding: 12px 22px;
+}
+
+.opinion-fs:fullscreen .legend,
+.opinion-fs.is-fs .legend {
+  font-size: 0.9rem;
+  gap: 10px 18px;
+}
+
+.opinion-fs:fullscreen .lane-label,
+.opinion-fs.is-fs .lane-label {
+  font-size: 1.05rem;
+}
+
+.opinion-fs:fullscreen .lane-stat,
+.opinion-fs.is-fs .lane-stat {
+  font-size: 1rem;
 }
