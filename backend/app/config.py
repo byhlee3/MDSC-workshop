@@ -25,8 +25,8 @@ class Settings(BaseSettings):
 
     # Chat phase tuning (seconds / counts) — surfaced to the client.
     chat_duration_seconds: int = 480  # ~8 min countdown (a maximum)
-    chat_min_seconds: int = 120  # minimum before "Continue" unlocks
-    chat_min_student_messages: int = 3  # minimum student turns before unlock
+    chat_min_seconds: int = 300  # 5 min — "Continue" unlocks at this OR the msg count
+    chat_min_student_messages: int = 5  # 5 student turns — unlock at this OR the time
 
     # CORS (frontend dev origin)
     frontend_origin: str = "http://localhost:5173"

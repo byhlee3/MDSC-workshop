@@ -102,3 +102,5 @@ def test_resume_returns_current_state(client):
     state = client.get(f"/api/participants/{pid}").json()
     assert state["phase"] == "chatting"
     assert state["pre_score"] == 3
+    # pre_rationale is exposed so the client can seed it as the first chat message.
+    assert state["pre_rationale"] == "Disagree."

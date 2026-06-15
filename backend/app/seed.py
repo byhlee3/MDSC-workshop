@@ -13,27 +13,43 @@ from sqlalchemy.orm import Session
 from .models import Scenario
 
 DEFAULT_SCENARIO = {
-    "title": "Withdrawing Life-Sustaining Treatment",
+    "title": "Breaking Confidence to Warn a Relative",
     "body": (
-        "A 24-year-old woman has been unconscious for four months following severe "
-        "autoimmune encephalitis. Multiple specialists believe meaningful recovery "
-        "is highly unlikely, but not impossible.\n\n"
-        "She left no written advance care directive, so her own wishes were never "
-        "documented. Her parents want all treatment continued indefinitely. Her "
-        "partner believes she would not want prolonged life support and wants "
-        "treatment withdrawn."
+        "You are the physician who ordered genetic testing for Daniel, 41, after "
+        "his colorectal cancer was diagnosed unusually early. The results confirm "
+        "Lynch syndrome, an inherited condition that sharply raises the lifetime "
+        "risk of colorectal, uterine, and several other cancers. For people who "
+        "know they carry it, regular screening and prevention cut that risk "
+        "dramatically and catch cancers early, while they are still curable.\n\n"
+        "Daniel has one sibling: a 38-year-old sister, Maria, who has roughly a "
+        "50% chance of carrying the same mutation. She has two young children. If "
+        "Maria learns of her risk and is screened, a cancer is very likely to be "
+        "caught in time; if she never learns of it, the first sign may be "
+        "advanced, incurable disease.\n\n"
+        "You urge Daniel to tell Maria, or to let you tell her. He refuses — "
+        "flatly and repeatedly. He and Maria have been estranged for years after a "
+        "bitter family dispute; he wants her nowhere near his medical life, and he "
+        "insists the result is his private information. He is fully competent and "
+        "understands exactly what he is declining. He forbids you to contact her.\n\n"
+        "Maria is not your patient. She has not asked to know anything. No law "
+        "clearly compels you either way, and your colleagues are divided. The "
+        "decision is yours."
     ),
     "action_taken": (
-        "The treating team decided to withdraw life-sustaining treatment, despite "
-        "the parents' objections."
+        "You contact Maria and tell her she may be at genetic risk, against "
+        "Daniel's explicit refusal."
     ),
     "framing_notes": (
-        "End-of-life decision under deep uncertainty. Tension between respecting the "
-        "patient's likely wishes (as voiced by her partner) and avoiding burdensome "
-        "treatment of vanishingly small benefit, versus the irreversibility of "
-        "withdrawal when recovery is 'not impossible' and her wishes were never "
-        "documented — plus an unresolved surrogate conflict between partner and "
-        "parents. Defensible arguments exist on both sides."
+        "Patient confidentiality and autonomy versus the duty to prevent serious, "
+        "preventable harm to an identifiable third party. The patient is competent "
+        "and explicitly refuses disclosure; the at-risk relative has an actionable, "
+        "life-saving intervention available (screening) but has not asked to know. "
+        "Defensible arguments exist on both sides and no clear legal duty or "
+        "guideline resolves it (cf. ABC v St George's), so the clinician must "
+        "balance it. The student rates how ethical 'the action' (contacting Maria) "
+        "is — a moral judgement, separate from whether they would personally do it. "
+        "Stance: pro argues the action is ethical/right, anti argues it is "
+        "unethical/wrong."
     ),
 }
 

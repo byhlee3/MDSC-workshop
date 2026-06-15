@@ -19,8 +19,8 @@ from sqlalchemy.orm import Session
 
 from .models import CONDITIONS, Participant
 
-# Midpoint of the 1..10 scale: >= 6 leans "agree", <= 5 leans "disagree".
-_AGREE_THRESHOLD = 6
+# Midpoint of the 1..10 scale: >= 6 leans "ethical", <= 5 leans "unethical".
+_ETHICAL_THRESHOLD = 6
 
 
 def _valid_conditions(pre_score: int) -> list[str]:
@@ -36,8 +36,13 @@ def _valid_conditions(pre_score: int) -> list[str]:
 
 
 def _directional_opposite(pre_score: int) -> str:
-    """The condition that argues against the participant's starting lean."""
-    return "anti" if pre_score >= _AGREE_THRESHOLD else "pro"
+    """The condition that argues against the participant's starting lean.
+
+    `pro` argues the action is ethical (pushes the score up); `anti` argues it is
+    unethical (pushes it down). So a participant who already leans "ethical" gets
+    nudged toward `anti`, and vice versa.
+    """
+    return "anti" if pre_score >= _ETHICAL_THRESHOLD else "pro"
 
 
 def _cumulative_counts(db: Session) -> dict[str, int]:

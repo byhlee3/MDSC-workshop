@@ -5,9 +5,9 @@ import csv
 import io
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.responses import JSONResponse, StreamingResponse
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from .db import get_db
@@ -35,6 +35,11 @@ def _generate_join_code() -> str:
 @router.post("/runs", response_model=RunOut)
 def create_run(req: CreateRunRequest, db: Session = Depends(get_db)) -> Run:
     scenario = seed_scenario(db)  # ensures the fixed scenario exists
+    # Auto-assign the next run number when the client doesn't specify one.
+    # run_number is a display label (not unique), so max+1 is fine even after deletes.
+    run_number = req.run_number
+    if run_number is None:
+        run_number = (db.scalar(select(func.max(Run.run_number))) or 0) + 1
     # Retry on the rare join-code collision.
     for _ in range(5):
         code = _generate_join_code()
@@ -43,7 +48,7 @@ def create_run(req: CreateRunRequest, db: Session = Depends(get_db)) -> Run:
     else:
         raise HTTPException(status_code=500, detail="Could not allocate join code")
     run = Run(
-        run_number=req.run_number,
+        run_number=run_number,
         join_code=code,
         facilitator=req.facilitator,
         scenario_id=scenario.id,
@@ -55,8 +60,38 @@ def create_run(req: CreateRunRequest, db: Session = Depends(get_db)) -> Run:
 
 
 @router.get("/runs", response_model=list[RunOut])
-def list_runs(db: Session = Depends(get_db)) -> list[Run]:
-    return db.execute(select(Run).order_by(Run.run_number)).scalars().all()
+def list_runs(db: Session = Depends(get_db)) -> list[RunOut]:
+    runs = db.execute(select(Run).order_by(Run.run_number)).scalars().all()
+    out: list[RunOut] = []
+    for r in runs:
+        ro = RunOut.model_validate(r)
+        ro.participant_count = len(r.participants)
+        out.append(ro)
+    return out
+
+
+@router.delete("/runs/{run_id}", status_code=204)
+def delete_run(run_id: str, db: Session = Depends(get_db)) -> Response:
+    """Hard-delete a run and ALL its data (participants, ratings, messages).
+
+    Irreversible; the facilitator confirms in the UI. Child rows are removed in
+    FK-safe order rather than relying on SQLite cascade / ORM cascade config.
+    """
+    run = db.get(Run, run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+    part_ids = (
+        db.execute(select(Participant.id).where(Participant.run_id == run_id))
+        .scalars()
+        .all()
+    )
+    if part_ids:
+        db.execute(delete(Message).where(Message.participant_id.in_(part_ids)))
+        db.execute(delete(Rating).where(Rating.participant_id.in_(part_ids)))
+        db.execute(delete(Participant).where(Participant.run_id == run_id))
+    db.delete(run)
+    db.commit()
+    return Response(status_code=204)
 
 
 @router.get("/runs/{run_id}/monitor", response_model=list[MonitorParticipant])

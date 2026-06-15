@@ -32,6 +32,7 @@ class ParticipantState(BaseModel):
     chat_min_seconds: int
     chat_min_student_messages: int
     pre_score: int | None = None
+    pre_rationale: str | None = None
     post_score: int | None = None
     student_message_count: int = 0
 
@@ -39,13 +40,13 @@ class ParticipantState(BaseModel):
 # ---- Ratings ----
 class RatingIn(BaseModel):
     score: int = Field(ge=1, le=10)
-    rationale: str = Field(min_length=1)
-    change_report: str | None = None  # post-rating only
+    rationale: str = Field(min_length=1, max_length=2000)
+    change_report: str | None = Field(default=None, max_length=2000)  # post-rating only
 
 
 # ---- Chat ----
 class MessageIn(BaseModel):
-    content: str = Field(min_length=1)
+    content: str = Field(min_length=1, max_length=2000)
 
 
 class MessageOut(BaseModel):
@@ -58,7 +59,8 @@ class MessageOut(BaseModel):
 
 # ---- Admin ----
 class CreateRunRequest(BaseModel):
-    run_number: int
+    # Optional: when omitted, the server assigns the next number (max + 1).
+    run_number: int | None = None
     facilitator: str = ""
 
 
@@ -68,6 +70,7 @@ class RunOut(BaseModel):
     join_code: str
     facilitator: str
     created_at: datetime
+    participant_count: int = 0
 
     model_config = ConfigDict(from_attributes=True)
 
