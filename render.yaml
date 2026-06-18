@@ -1,0 +1,25 @@
+# Render Blueprint — defines the whole deployment so it can be provisioned in one step.
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: mdsc-workshop
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter          # paid: required for the persistent disk + no spin-down
+    branch: main
+    region: oregon         # change to frankfurt / singapore / ohio / virginia if closer
+    healthCheckPath: /api/health
+    autoDeploy: true       # redeploy automatically on every push to main
+    disk:
+      name: data           # persistent SQLite storage; survives redeploys
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite:////data/study.db   # four slashes = absolute path /data/study.db
+      - key: ANTHROPIC_API_KEY
+        sync: false        # prompted at deploy time (kept secret, not in the repo)
+      - key: ADMIN_PASSWORD
+        sync: false        # prompted at deploy time
+      - key: MODEL
+        value: claude-opus-4-8
