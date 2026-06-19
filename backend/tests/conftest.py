@@ -1,6 +1,13 @@
 """Test fixtures: isolated in-memory SQLite + a TestClient with the chat proxy stubbed."""
 from __future__ import annotations
 
+import os
+
+# Pin the admin password BEFORE app/config is imported so a developer's local
+# backend/.env can't leak in and break the admin-auth tests. Env vars take
+# precedence over the .env file in pydantic-settings.
+os.environ["ADMIN_PASSWORD"] = "change-me"
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
