@@ -28,8 +28,6 @@ class ParticipantState(BaseModel):
     participant_id: str
     phase: str
     scenario: ScenarioOut
-    chat_duration_seconds: int
-    chat_min_seconds: int
     chat_min_student_messages: int
     pre_score: int | None = None
     pre_rationale: str | None = None

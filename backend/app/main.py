@@ -82,8 +82,6 @@ def _build_state(db: Session, p: Participant) -> ParticipantState:
         participant_id=p.id,
         phase=p.phase,
         scenario=ScenarioOut.model_validate(p.run.scenario),
-        chat_duration_seconds=settings.chat_duration_seconds,
-        chat_min_seconds=settings.chat_min_seconds,
         chat_min_student_messages=settings.chat_min_student_messages,
         pre_score=pre.score if pre else None,
         pre_rationale=pre.rationale if pre else None,
@@ -151,16 +149,16 @@ def submit_rating(
     else:  # post
         if p.phase != "chatting":
             raise HTTPException(status_code=409, detail="Not at the post-rating step")
-        # The "Continue" gate (chat_min_student_messages OR chat_min_seconds) is
-        # enforced client-side, since elapsed time isn't tracked server-side. The
-        # backend keeps only an anti-degenerate floor: never complete with zero
-        # discussion. (Bumping this to the full message minimum would block the
-        # time-based path of the OR gate.)
+        # The "Continue" gate is purely message-count based (no time component);
+        # enforce it server-side too so the study can't be completed early.
         msgs = _student_message_count(db, p.id)
-        if msgs < 1:
+        if msgs < settings.chat_min_student_messages:
             raise HTTPException(
                 status_code=409,
-                detail="Send at least one message before finishing.",
+                detail=(
+                    f"Send at least {settings.chat_min_student_messages} messages "
+                    f"before finishing (sent {msgs})."
+                ),
             )
         # Final verdict completes the study. The deception is NOT disclosed on
         # screen (the facilitator debriefs the group live, to avoid early

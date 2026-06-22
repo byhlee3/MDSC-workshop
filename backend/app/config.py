@@ -23,10 +23,9 @@ class Settings(BaseSettings):
     # Storage
     database_url: str = "sqlite:///./study.db"
 
-    # Chat phase tuning (seconds / counts) — surfaced to the client.
-    chat_duration_seconds: int = 480  # ~8 min countdown (a maximum)
-    chat_min_seconds: int = 300  # 5 min — "Continue" unlocks at this OR the msg count
-    chat_min_student_messages: int = 5  # 5 student turns — unlock at this OR the time
+    # Chat gating (surfaced to the client). "Continue" unlocks purely on message
+    # count; there is no time component.
+    chat_min_student_messages: int = 5  # student turns required before "Continue"
 
     # CORS (frontend dev origin)
     frontend_origin: str = "http://localhost:5173"

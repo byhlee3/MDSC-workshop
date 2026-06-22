@@ -46,15 +46,15 @@ def test_full_flow(client):
     assert early.status_code == 409
 
     # Send the minimum messages (model stubbed)
-    for i in range(3):
+    for i in range(5):
         r = client.post(f"/api/participants/{pid}/messages", json={"content": f"msg {i}"})
         assert r.status_code == 200
         assert "another angle" in r.text
 
-    # Transcript persisted: 3 student + 3 ai
+    # Transcript persisted: 5 student + 5 ai
     msgs = client.get(f"/api/participants/{pid}/messages").json()
-    assert len(msgs) == 6
-    assert [m["role"] for m in msgs] == ["student", "ai"] * 3
+    assert len(msgs) == 10
+    assert [m["role"] for m in msgs] == ["student", "ai"] * 5
 
     # Post-rating completes the study (no on-screen debrief; facilitator debriefs live)
     r = client.post(
@@ -77,7 +77,7 @@ def test_full_flow(client):
     dump = client.get("/api/admin/export.json", headers=ADMIN).json()
     p0 = dump["participants"][0]
     assert p0["resolved_system_prompt"]
-    assert len(p0["transcript"]) == 6
+    assert len(p0["transcript"]) == 10
     # Condition + shift are available to the facilitator via export
     assert p0["condition"] in ("pro", "anti", "control")
     assert p0["pre_score"] == 8 and p0["post_score"] == 4 and p0["shift"] == -4
