@@ -133,26 +133,73 @@ function Consent({ state, setState, setError }: PhaseProps) {
         difficult decision, discuss the case with an AI, and then weigh it once more.
       </p>
       <p>
-        Your responses are recorded <strong>anonymously</strong> — we collect no name or
+        Your responses are recorded <strong>anonymously</strong> - we collect no name or
         identifying information. You may stop at any time.
       </p>
       <div className="actions">
-        <button onClick={accept}>I understand — continue</button>
+        <button onClick={accept}>I understand - continue</button>
       </div>
     </div>
   )
 }
 
-function ScenarioCard({ state }: { state: ParticipantState }) {
+// Render case text with paragraph breaks (\n\n) and sparing **bold** spans.
+// Builds real React elements, no dangerouslySetInnerHTML.
+function CaseBody({ text }: { text: string }) {
+  return (
+    <>
+      {text.split('\n\n').map((para, i) => (
+        <p key={i}>
+          {para.split(/(\*\*[^*]+\*\*)/g).map((seg, j) =>
+            seg.startsWith('**') && seg.endsWith('**') ? (
+              <strong key={j}>{seg.slice(2, -2)}</strong>
+            ) : (
+              seg
+            ),
+          )}
+        </p>
+      ))}
+    </>
+  )
+}
+
+function ScenarioCard({
+  state,
+  collapsible = false,
+}: {
+  state: ParticipantState
+  collapsible?: boolean
+}) {
+  const [collapsed, setCollapsed] = useState(false)
   return (
     <div className="card">
-      <div className="eyebrow">The Case</div>
-      <h2>{state.scenario.title}</h2>
-      <div className="scenario">{state.scenario.body}</div>
-      <div className="action">
-        <strong>The decision you must make</strong>
-        <div className="scenario">{state.scenario.action_taken}</div>
+      <div className={`eyebrow${collapsible ? ' eyebrow-row' : ''}`}>
+        <span>The Case</span>
+        {collapsible && (
+          <button
+            type="button"
+            className="case-toggle"
+            onClick={() => setCollapsed((c) => !c)}
+            aria-expanded={!collapsed}
+          >
+            {collapsed ? 'show' : 'hide'}
+          </button>
+        )}
       </div>
+      {!collapsed && (
+        <>
+          <h2>{state.scenario.title}</h2>
+          <div className="scenario">
+            <CaseBody text={state.scenario.body} />
+          </div>
+          <div className="action">
+            <strong>The decision you must make</strong>
+            <div className="scenario">
+              <CaseBody text={state.scenario.action_taken} />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -193,7 +240,7 @@ function RatePhase({
         <div className="eyebrow">{phase === 'pre' ? 'Your verdict' : 'Your verdict, revisited'}</div>
         <h2>{phase === 'pre' ? 'How ethical is this action?' : 'How ethical is it now?'}</h2>
         <p>
-          Rate how ethical the action is — regardless of whether you would
+          Rate how ethical the action is - regardless of whether you would
           personally do it.
         </p>
 
@@ -216,7 +263,7 @@ function RatePhase({
         </div>
 
         <div className="field">
-          <label>Briefly — why?</label>
+          <label>Briefly - why?</label>
           <textarea value={rationale} onChange={(e) => setRationale(e.target.value)} />
         </div>
 
@@ -245,12 +292,9 @@ function Chat({ state, setState, setError }: PhaseProps) {
   const [draft, setDraft] = useState('')
   const [streaming, setStreaming] = useState('')
   const [busy, setBusy] = useState(false)
-  const [elapsed, setElapsed] = useState(0)
   const logRef = useRef<HTMLDivElement>(null)
   const draftRef = useRef<HTMLTextAreaElement>(null)
   const autoSentRef = useRef(false)
-
-  const startKey = `chat_start_${state.participant_id}`
 
   useEffect(() => {
     api
@@ -266,25 +310,15 @@ function Chat({ state, setState, setError }: PhaseProps) {
           state.pre_rationale
         ) {
           autoSentRef.current = true
-          const first = `My initial rating of how ethical this action is: ${state.pre_score}/10 — ${ethicsWord(
+          const first = `My initial rating of how ethical this action is: ${state.pre_score}/10 - ${ethicsWord(
             state.pre_score,
           )}.\n\n${state.pre_rationale}`
           void sendContent(first)
         }
       })
       .catch(() => {})
-    if (!localStorage.getItem(startKey)) {
-      localStorage.setItem(startKey, String(Date.now()))
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.participant_id])
-
-  useEffect(() => {
-    const start = Number(localStorage.getItem(startKey)) || Date.now()
-    const t = setInterval(() => setElapsed(Math.floor((Date.now() - start) / 1000)), 1000)
-    return () => clearInterval(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   useEffect(() => {
     logRef.current?.scrollTo(0, logRef.current.scrollHeight)
@@ -299,11 +333,8 @@ function Chat({ state, setState, setError }: PhaseProps) {
   }, [draft])
 
   const studentCount = messages.filter((m) => m.role === 'student').length
-  const remaining = Math.max(0, state.chat_duration_seconds - elapsed)
-  // Unlock at the message floor OR the time floor — whichever comes first.
-  const canContinue =
-    elapsed >= state.chat_min_seconds || studentCount >= state.chat_min_student_messages
-  const timeUp = remaining === 0
+  // Unlock once the student has sent the minimum number of messages (no timer).
+  const canContinue = studentCount >= state.chat_min_student_messages
 
   const sendContent = async (content: string) => {
     setBusy(true)
@@ -332,40 +363,32 @@ function Chat({ state, setState, setError }: PhaseProps) {
 
   const finish = () => setState({ ...state, phase: 'post' })
 
-  const mm = String(Math.floor(remaining / 60)).padStart(2, '0')
-  const ss = String(remaining % 60).padStart(2, '0')
-
   return (
     <>
+      <ScenarioCard state={state} collapsible />
       <div className="card">
         <div className="eyebrow">The Discussion</div>
-        <div className="row spread">
-          <h2 style={{ margin: 0 }}>Discuss the case</h2>
-          <span className={`timer${remaining < 60 ? ' urgent' : ''}`}>
-            {mm}:{ss}
-          </span>
-        </div>
+        <h2 style={{ margin: '0 0 12px' }}>Discuss the case</h2>
         <p className="muted">
           Think aloud and discuss your view. You may continue after{' '}
-          {state.chat_min_student_messages} messages or{' '}
-          {Math.round(state.chat_min_seconds / 60)} min.
+          {state.chat_min_student_messages} messages.
         </p>
 
         <div className="chat-log" ref={logRef}>
           {messages.map((m, i) => (
             <div key={i} className={`turn ${m.role}`}>
-              <div className="turn-label">{m.role === 'student' ? 'You' : 'The Voice'}</div>
+              <div className="turn-label">{m.role === 'student' ? 'You' : 'Discussion partner'}</div>
               <div className="turn-body">{m.content}</div>
             </div>
           ))}
           {streaming && (
             <div className="turn ai">
-              <div className="turn-label">The Voice</div>
+              <div className="turn-label">Discussion partner</div>
               <div className="turn-body cursor">{streaming}</div>
             </div>
           )}
           {messages.length === 0 && !streaming && (
-            <p className="muted">— Begin the discussion below. —</p>
+            <p className="muted">Begin the discussion below.</p>
           )}
         </div>
 
@@ -391,7 +414,7 @@ function Chat({ state, setState, setError }: PhaseProps) {
       </div>
 
       <div className="actions">
-        <button className="secondary" onClick={finish} disabled={!canContinue && !timeUp}>
+        <button className="secondary" onClick={finish} disabled={!canContinue}>
           Continue to your final verdict
         </button>
       </div>
@@ -405,7 +428,7 @@ function Submitted({ onReset }: { onReset: () => void }) {
       <div className="eyebrow">Submitted</div>
       <h2>Thank you for taking part</h2>
       <p>
-        Your responses have been recorded. Please set your device down — we'll discuss the
+        Your responses have been recorded. Please set your device down - we'll discuss the
         case together as a group shortly.
       </p>
       <div className="actions">
@@ -582,7 +605,7 @@ function Runs({
         <div key={r.id} style={{ marginBottom: 12 }}>
           <div className="row spread">
             <span>
-              Run {r.run_number} — code{' '}
+              Run {r.run_number} - code{' '}
               <span className="join-code" style={{ display: 'inline-block', fontSize: '1rem' }}>
                 {r.join_code}
               </span>{' '}
@@ -619,7 +642,7 @@ function Runs({
                   <tr key={p.participant_id}>
                     <td>{p.participant_id.slice(0, 8)}</td>
                     <td>{p.phase}</td>
-                    <td>{p.condition ?? '—'}</td>
+                    <td>{p.condition ?? '-'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -653,9 +676,9 @@ const shiftColor = (pre: number, post: number) =>
   post > pre ? TOWARD_ETHICAL : post < pre ? TOWARD_UNETHICAL : NO_CHANGE
 
 const LANES: { key: string; label: string }[] = [
-  { key: 'pro', label: 'Pro — argued for the action' },
-  { key: 'anti', label: 'Anti — argued against it' },
-  { key: 'control', label: 'Control — stayed neutral' },
+  { key: 'pro', label: 'Pro - argued for the action' },
+  { key: 'anti', label: 'Anti - argued against it' },
+  { key: 'control', label: 'Control - stayed neutral' },
   { key: 'all', label: 'All participants (pooled)' },
 ]
 
@@ -699,7 +722,7 @@ function Lane({
         const delay = `${i * 35}ms`
         return (
           <g key={i}>
-            {/* connector — drawn under the dots, grows from the before dot */}
+            {/* connector - drawn under the dots, grows from the before dot */}
             <line
               x1={preX}
               y1={y}
@@ -716,9 +739,9 @@ function Lane({
                 transition: `transform 700ms ${ease} ${delay}`,
               }}
             />
-            {/* before dot — hollow ring in the condition hue */}
+            {/* before dot - hollow ring in the condition hue */}
             <circle cx={preX} cy={y} r={r} fill="#fff" stroke={col} strokeWidth={2} />
-            {/* after dot — solid condition hue, slides from before to post */}
+            {/* after dot - solid condition hue, slides from before to post */}
             <circle
               cx={postX}
               cy={y}
@@ -847,7 +870,7 @@ function OpinionGraphCard({ a, runs }: { a: ReturnType<typeof adminApi>; runs: R
   }, [])
 
   // Native fullscreen sets document.fullscreenElement; the CSS-overlay fallback
-  // does not — so "in fallback mode" is simply (fs && no fullscreenElement).
+  // does not - so "in fallback mode" is simply (fs && no fullscreenElement).
   useEffect(() => {
     const onChange = () => setFs(document.fullscreenElement === fsRef.current)
     document.addEventListener('fullscreenchange', onChange)
@@ -923,7 +946,7 @@ function ResultsCard({ results }: { results: Results | null }) {
   if (!results) return null
   return (
     <div className="card">
-      <div className="eyebrow">Results — pooled across all runs</div>
+      <div className="eyebrow">Results - pooled across all runs</div>
       <h2>The shift</h2>
       <p className="muted">
         {results.completed} completed of {results.total_participants} joined.
@@ -943,11 +966,11 @@ function ResultsCard({ results }: { results: Results | null }) {
             <tr key={c.condition}>
               <td>{c.condition}</td>
               <td>{c.n}</td>
-              <td>{c.mean_pre?.toFixed(2) ?? '—'}</td>
-              <td>{c.mean_post?.toFixed(2) ?? '—'}</td>
+              <td>{c.mean_pre?.toFixed(2) ?? '-'}</td>
+              <td>{c.mean_post?.toFixed(2) ?? '-'}</td>
               <td className={c.mean_shift && c.mean_shift > 0 ? 'shift-pos' : undefined}>
                 {c.mean_shift == null
-                  ? '—'
+                  ? '-'
                   : c.mean_shift > 0
                     ? `+${c.mean_shift.toFixed(2)}`
                     : c.mean_shift.toFixed(2)}

@@ -11,8 +11,6 @@ export type ParticipantState = {
   participant_id: string
   phase: 'joined' | 'scenario' | 'chatting' | 'post' | 'done'
   scenario: Scenario
-  chat_duration_seconds: number
-  chat_min_seconds: number
   chat_min_student_messages: number
   pre_score: number | null
   pre_rationale: string | null
